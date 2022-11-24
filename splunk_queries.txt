@@ -1,0 +1,14 @@
+index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d
+|eval _time=_time+86400  | timechart span=1h count | where count > 0 | rename count AS Yesterday
+| join type=outer _time 
+
+[search index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d 
+|eval _time=_time+86400  | timechart span=1h count | where count > 0 | rename count AS Yesterday] | join type=outer _time 
+
+[search index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-7d@d latest=-6d@d 
+|eval _time=_time+(86400*7)  | timechart span=1h count  | where count > 0 | rename count AS 7DaysAgo ]| join type=outer _time  
+
+[search index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-0d@d latest=now 
+| timechart span=1h count AS Today ]
+
+
