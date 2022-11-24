@@ -12,3 +12,13 @@ index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.
 | timechart span=1h count AS Today ]
 
 
+
+index=cloud_ecp  data.path="*ovc-schedule-functions*" "data.kubernetes.labels.app.kubernetes.io/instance"="nginx-ingress-external" "data.status"=*  data.path!="/ovc-schedule-functions/api/logger*"
+| search data.path!="*/logger*"
+| chart count by data.path, data.status | addtotals
+
+
+index=cloud_ecp  sourcetype="prod-ecp-aks-cluster-logs" data.application=*
+| eval response_time=pub-rec 
+| stats count AS count  max(response_time) AS max avg(response_time) AS avg p95(response_time) AS p95 BY data.application
+|sort - p95
