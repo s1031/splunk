@@ -48,3 +48,18 @@ appt_sts_ref_id=73520,"Queued")
 | search (app_status=*)
 | dedup data.event.appointment.appt_id
 | stats count BY app_status | addcoltotals
+
+
+index=cloud_ecp  sourcetype="" data.kubernetes.namespace_name="" OR data.kubernetes.namespace_name="" data.message=* NOT data.level=*
+| where NOT LIKE('data.message', "%Host.Function.Console%")
+| rex field="data.message" "\+\d+\][\s]+\"(?<http_method>\S+)\s(?<http_uri>\S+)\s\S+\s(?<http_status>\d+)" 
+| rename data.kubernetes.labels.app AS podgroup
+| search http_status>=400 podgroup=*
+
+| stats count AS total by http_status
+| eventstats sum(total) as columntotal
+| eval percent_error=round(total*100/columntotal,2)
+| fields - total columntotal
+
+
+
