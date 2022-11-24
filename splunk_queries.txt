@@ -1,36 +1,38 @@
-index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d
+index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d
 |eval _time=_time+86400  | timechart span=1h count | where count > 0 | rename count AS Yesterday
 | join type=outer _time 
 
-[search index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d 
+[search index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d 
 |eval _time=_time+86400  | timechart span=1h count | where count > 0 | rename count AS Yesterday] | join type=outer _time 
 
-[search index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-7d@d latest=-6d@d 
+[search index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-7d@d latest=-6d@d 
 |eval _time=_time+(86400*7)  | timechart span=1h count  | where count > 0 | rename count AS 7DaysAgo ]| join type=outer _time  
 
-[search index=cloud_ecp "data.kubernetes.labels.app"="ovc-schedule-baas-functions" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-0d@d latest=now 
+[search index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-0d@d latest=now 
 | timechart span=1h count AS Today ]
 
 
 
-index=cloud_ecp  data.path="*ovc-schedule-functions*" "data.kubernetes.labels.app.kubernetes.io/instance"="nginx-ingress-external" "data.status"=*  data.path!="/ovc-schedule-functions/api/logger*"
+
+
+index=  data.path="**" "data.kubernetes.labels.app.kubernetes.io/instance"="nginx-ingress-external" "data.status"=*  data.path!="/ovc-schedule-functions/api/logger*"
 | search data.path!="*/logger*"
 | chart count by data.path, data.status | addtotals
 
 
-index=cloud_ecp  sourcetype="prod-ecp-aks-cluster-logs" data.application=*
+index=cloud_ecp  sourcetype="" data.application=*
 | eval response_time=pub-rec 
 | stats count AS count  max(response_time) AS max avg(response_time) AS avg p95(response_time) AS p95 BY data.application
 |sort - p95
 
 
-index=cloud_ecp  sourcetype="prod-ecp-aks-cluster-logs" data.application=*
+index=cloud_ecp  sourcetype="" data.application=*
 | eval response_time=pub-rec 
 | search data.application=* 
 |timechart bins=100 p95(response_time) AS p95 BY data.application limit=20
 
 
-index=cloud_ecp sourcetype=prod-ecp-aks-cluster-logs data.kubernetes.labels.app=ovc-payment-functions data.message=* 
+index= sourcetype= data.kubernetes.labels.app= data.message=* 
 | rex "appt_sts_ref_id[\\\\\\\":]*(?<appt_sts_ref_id>[^,]*)"
 | rex mode=sed field=appt_sts_ref_id "s/[_!@#$%^&*(),.?\":{}|<>\/\\\\]//g"
 |eval app_status=case(appt_sts_ref_id=20095,"In Progress",
