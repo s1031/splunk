@@ -22,3 +22,9 @@ index=cloud_ecp  sourcetype="prod-ecp-aks-cluster-logs" data.application=*
 | eval response_time=pub-rec 
 | stats count AS count  max(response_time) AS max avg(response_time) AS avg p95(response_time) AS p95 BY data.application
 |sort - p95
+
+
+index=cloud_ecp  sourcetype="prod-ecp-aks-cluster-logs" data.application=*
+| eval response_time=pub-rec 
+| search data.application=* 
+|timechart bins=100 p95(response_time) AS p95 BY data.application limit=20
