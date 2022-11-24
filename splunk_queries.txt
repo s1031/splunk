@@ -28,3 +28,21 @@ index=cloud_ecp  sourcetype="prod-ecp-aks-cluster-logs" data.application=*
 | eval response_time=pub-rec 
 | search data.application=* 
 |timechart bins=100 p95(response_time) AS p95 BY data.application limit=20
+
+
+index=cloud_ecp sourcetype=prod-ecp-aks-cluster-logs data.kubernetes.labels.app=ovc-payment-functions data.message=* 
+| rex "appt_sts_ref_id[\\\\\\\":]*(?<appt_sts_ref_id>[^,]*)"
+| rex mode=sed field=appt_sts_ref_id "s/[_!@#$%^&*(),.?\":{}|<>\/\\\\]//g"
+|eval app_status=case(appt_sts_ref_id=20095,"In Progress",
+appt_sts_ref_id=20093,"Completed",
+appt_sts_ref_id=20094,"Cancelled",
+appt_sts_ref_id=20069,"Scheduled",
+appt_sts_ref_id=20070,"Rescheduled",
+appt_sts_ref_id=20071,"No Show",
+appt_sts_ref_id=73425,"In-Complete",
+appt_sts_ref_id=73426,"Pending",
+appt_sts_ref_id=73530,"SchedulingInProgress",
+appt_sts_ref_id=73520,"Queued")
+| search (app_status=*)
+| dedup data.event.appointment.appt_id
+| stats count BY app_status | addcoltotals
