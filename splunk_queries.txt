@@ -1,21 +1,21 @@
-index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d
+index= "data.kubernetes.labels.app"="" data.context="" data.msg=* earliest=-1d@d latest=-0d@d
 |eval _time=_time+86400  | timechart span=1h count | where count > 0 | rename count AS Yesterday
 | join type=outer _time 
 
-[search index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=* earliest=-1d@d latest=-0d@d 
+[search index= "data.kubernetes.labels.app"="" data.context="" data.msg=* earliest=-1d@d latest=-0d@d 
 |eval _time=_time+86400  | timechart span=1h count | where count > 0 | rename count AS Yesterday] | join type=outer _time 
 
-[search index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-7d@d latest=-6d@d 
+[search index= "data.kubernetes.labels.app"="" data.context="" data.msg=*  earliest=-7d@d latest=-6d@d 
 |eval _time=_time+(86400*7)  | timechart span=1h count  | where count > 0 | rename count AS 7DaysAgo ]| join type=outer _time  
 
-[search index= "data.kubernetes.labels.app"="" data.context="AppointmentService.bookAppointment" data.msg=*  earliest=-0d@d latest=now 
+[search index= "data.kubernetes.labels.app"="" data.context="" data.msg=*  earliest=-0d@d latest=now 
 | timechart span=1h count AS Today ]
 
 
 
 
 
-index=  data.path="**" "data.kubernetes.labels.app.kubernetes.io/instance"="nginx-ingress-external" "data.status"=*  data.path!="/ovc-schedule-functions/api/logger*"
+index=  data.path="**" "data.kubernetes.labels.app.kubernetes.io/instance"="nginx-ingress-external" "data.status"=*  data.path!="*"
 | search data.path!="*/logger*"
 | chart count by data.path, data.status | addtotals
 
@@ -50,7 +50,7 @@ appt_sts_ref_id=73520,"Queued")
 | stats count BY app_status | addcoltotals
 
 
-index=cloud_ecp  sourcetype="" data.kubernetes.namespace_name="" OR data.kubernetes.namespace_name="" data.message=* NOT data.level=*
+index=  sourcetype="" data.kubernetes.namespace_name="" OR data.kubernetes.namespace_name="" data.message=* NOT data.level=*
 | where NOT LIKE('data.message', "%Host.Function.Console%")
 | rex field="data.message" "\+\d+\][\s]+\"(?<http_method>\S+)\s(?<http_uri>\S+)\s\S+\s(?<http_status>\d+)" 
 | rename data.kubernetes.labels.app AS podgroup
@@ -60,6 +60,20 @@ index=cloud_ecp  sourcetype="" data.kubernetes.namespace_name="" OR data.kuberne
 | eventstats sum(total) as columntotal
 | eval percent_error=round(total*100/columntotal,2)
 | fields - total columntotal
+
+index= sourcetype=
+          | search data.proxy_upstream_name="**" OR data.proxy_upstream_name="**"
+| rename data.proxy_upstream_name as Service_Name, data.path as API, data.status as Status_Code, data.upstream_response_time as response_time
+| search API!=""
+| search Service_Name!="*snowflake*" AND Service_Name!="-" AND Service_Name!="*grafana*" AND Service_Name!="*prometheus*" AND Service_Name!="*elastic*"
+| rex field=Service_Name "(?<Service_Name>\S+)"
+| rex mode=sed field=Service_Name "s/[_!@#$%^&*(),.?\":{}|<>\/\\\\80]//g"
+| search ""
+| stats count AS total, 
+  count(eval('Status_Code'>=400 OR ('Status_Code'<400 AND 'response_time'>=2))) AS failures by Service_Name 
+| eval error_rate=round(failures/total*100,2)
+| where error_rate>=1
+| fields + Service_Name, error_rate
 
 
 
