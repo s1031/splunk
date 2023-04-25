@@ -1,3 +1,18 @@
+
+index= sourcetype="" "data.context"="" "start_date" 
+| rex "lead_time[\\\":]*(?<lead_time>[^,]*)" 
+| rex mode=sed field=lead_time "s/[_!@#$%^&*(),.?\":{}|<>\/\\\\]//g" 
+| rex "start_date[\\\":]*(?<start_date>[^,]*)" 
+| rex mode=sed field=start_date "s/[_!@#$%^&*(),.?\":{}|<>\/\\\\]//g" 
+| rex "end_date[\\\":]*(?<end_date>[^,]*)" 
+| rex mode=sed field=end_date "s/[_!@#$%^&*(),.?\'\":{}|<>\/\\\\]//g" 
+| eval it = strptime(start_date, "%Y-%m-%d") 
+| eval ot = strptime(end_date, "%Y-%m-%d") 
+| eval diff = tostring((ot - it), "duration") | rex mode=sed field=diff "s/[+0:.]//g"
+| where lead_time>5 AND diff>0
+| table _time start_date end_date diff 
+| sort by -diff
+
 index= "data.kubernetes.labels.app"="" data.context="" data.msg=* earliest=-1d@d latest=-0d@d
 |eval _time=_time+86400  | timechart span=1h count | where count > 0 | rename count AS Yesterday
 | join type=outer _time 
